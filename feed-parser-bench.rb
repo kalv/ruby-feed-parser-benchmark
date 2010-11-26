@@ -1,5 +1,8 @@
 #/usr/ruby
 require "rubygems"
+require "bundler"
+Bundler.setup
+
 require "mrss.rb"
 require "simple-rss"
 require 'syndication/rss' 
