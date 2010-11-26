@@ -8,6 +8,7 @@ require "simple-rss"
 require 'syndication/rss' 
 require 'syndication/atom'
 require "rfeedparser"
+require 'feedzirra'
 
 def test_mrss(feed)
   begin
@@ -28,6 +29,18 @@ def test_simplerss(feed)
     SimpleRSS.parse feed
     si_stop = Time.now
     si_stop - si_start
+  rescue
+    -1
+  end
+end
+
+def test_feedzirra(feed)
+  begin
+    # Feedzirra
+    f_start = Time.now
+    Feedzirra::Feed.parse(feed)
+    f_stop = Time.now
+    f_stop - f_start
   rescue
     -1
   end
@@ -99,8 +112,9 @@ file_names = Dir['feeds/*']
 results = Hash.new
 index = 0
 max = ARGV[0].to_i || 10000 # Maximum 10k feeds
-puts "\"filename\", \"type\", \"rfeedparser\", \"syndication\",\"simplerss\", \"mrss\""
+puts "\"filename\", \"type\", \"rfeedparser\", \"syndication\",\"simplerss\", \"mrss\", \"feedzirra\""
 file_names.each do |file_name|
+  #puts "Processing #{file_name}"
   index = index + 1
   file = File.open(file_name, "r")
   feed = file.read
@@ -108,11 +122,17 @@ file_names.each do |file_name|
   begin
     results[file_name] = Hash.new
     results[file_name][:type] = type 
+    #puts "rfeedparser"
     results[file_name][:rfeedparser] = test_feedparser(feed) 
+    #puts "syndication"
     results[file_name][:syndication] = test_syndication(feed, type)
+    #puts "simplerss"
     results[file_name][:simplerss] = test_simplerss(feed) 
+    #puts "mrss"
     results[file_name][:mrss] = test_mrss(feed)
-    puts "\"#{file_name}\", \"#{results[file_name][:type]}\", #{results[file_name][:rfeedparser]}, #{results[file_name][:syndication]}, #{results[file_name][:simplerss]}, #{results[file_name][:mrss]}"
+    #puts "feedzirra"
+    results[file_name][:feedzirra] = test_feedzirra(feed)
+    puts "\"#{file_name}\", \"#{results[file_name][:type]}\", #{results[file_name][:rfeedparser]}, #{results[file_name][:syndication]}, #{results[file_name][:simplerss]}, #{results[file_name][:mrss]}, #{results[file_name][:feedzirra]}"
   rescue
     puts "Error for feed: #{file_name} => #{$!}"
   end
@@ -120,26 +140,25 @@ file_names.each do |file_name|
 end
 
 # Average by feed (all feed types, and number of errors)
+parsers_tested = [:rfeedparser, :syndication, :simplerss, :mrss, :feedzirra]
 stats = Hash.new
-init_results(stats, :rfeedparser)
-init_results(stats, :syndication)
-init_results(stats, :simplerss)
-init_results(stats, :mrss)
+parsers_tested.each do |parser|
+  init_results(stats, parser)
+end
 
 results.each do |result|
-  stats_for_type(stats, result, :rfeedparser)
-  stats_for_type(stats, result, :syndication)
-  stats_for_type(stats, result, :simplerss)
-  stats_for_type(stats, result, :mrss)
+  parsers_tested.each do |parser|
+    stats_for_type(stats, result, parser)
+  end
 end
 
 # And now fot each parser, print the average time for RSS and ATOM, as well as the number of errors
-results = {}
+output_results = {}
 stats.each do |parser_name, stats|
   average = stats[:any][:total_time]/stats[:any][:number_of_feeds]
-  results[average] = "#{parser_name} => Average: #{average} (#{stats[:any][:errors]} errors) RSS: #{stats[:rss][:total_time]/stats[:rss][:number_of_feeds]} Atom: #{stats[:atom][:total_time]/stats[:atom][:number_of_feeds]}"
+  output_results[average] = "#{parser_name} => Average: #{average} (#{stats[:any][:errors]} errors) RSS: #{stats[:rss][:total_time]/stats[:rss][:number_of_feeds]} Atom: #{stats[:atom][:total_time]/stats[:atom][:number_of_feeds]}"
 end
 
-results.sort.each do |result|
+output_results.sort.each do |result|
   puts result[1]
 end
