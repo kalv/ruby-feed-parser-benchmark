@@ -134,6 +134,12 @@ results.each do |result|
 end
 
 # And now fot each parser, print the average time for RSS and ATOM, as well as the number of errors
+results = {}
 stats.each do |parser_name, stats|
-  puts "#{parser_name} => Average: #{stats[:any][:total_time]/stats[:any][:number_of_feeds]} (#{stats[:any][:errors]} errors) RSS: #{stats[:rss][:total_time]/stats[:rss][:number_of_feeds]} Atom: #{stats[:atom][:total_time]/stats[:atom][:number_of_feeds]}"
+  average = stats[:any][:total_time]/stats[:any][:number_of_feeds]
+  results[average] = "#{parser_name} => Average: #{average} (#{stats[:any][:errors]} errors) RSS: #{stats[:rss][:total_time]/stats[:rss][:number_of_feeds]} Atom: #{stats[:atom][:total_time]/stats[:atom][:number_of_feeds]}"
+end
+
+results.sort.each do |result|
+  puts result[1]
 end
